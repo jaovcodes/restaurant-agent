@@ -65,7 +65,7 @@ No plano gratuito, as requisições podem ser usadas para treinar os modelos da 
 
 ```powershell
 git clone https://github.com/jaovcodes/restaurant-agent.git
-cd Projeto_Mistral
+cd restaurant-agent
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
@@ -79,7 +79,7 @@ Se o PowerShell bloquear a ativação do ambiente virtual, rode `Set-ExecutionPo
 
 ```bash
 git clone https://github.com/jaovcodes/restaurant-agent.git
-cd Projeto_Mistral
+cd restaurant-agent
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -219,7 +219,7 @@ Retorna `{"status": "ok"}`.
 ## Estrutura do projeto
 
 ```
-Projeto_Mistral/
+restaurant-agent/
 ├── app/
 │   ├── agent/
 │   │   ├── agent.py            # loop de function calling
