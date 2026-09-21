@@ -1,238 +1,274 @@
-# Assistente de restaurante com Mistral
+# Sabor & Arte: assistente de restaurante com Mistral
 
-Este projeto é um agente conversacional para atendimento de restaurante. Ele conversa no terminal, usa a API da Mistral para decidir quando chamar ferramentas, e executa ações no banco de dados como:
+Agente conversacional para atendimento de restaurante. O cliente escreve em linguagem natural e o assistente consulta o cardápio, informa horários, verifica mesas e cria, consulta ou cancela reservas.
 
-- consultar cardápio
-- consultar preços
-- verificar horários de funcionamento
-- verificar disponibilidade de mesas
-- criar, consultar e cancelar reservas
+Funciona de duas formas: no **terminal** e em uma **interface web** que também pode ser colocada no site do próprio restaurante.
 
-O objetivo é permitir uma experiência de atendimento natural, sem que o usuário precise lidar diretamente com o banco ou a lógica do restaurante.
-
-## Estrutura do projeto
-
-```text
-projeto_Mistral/
-├── app/
-│   ├── agent/
-│   │   ├── agent.py
-│   │   ├── memory.py
-│   │   ├── mistral_client.py
-│   │   └── prompts.py
-│   ├── tools/
-│   │   ├── cardapio.py
-│   │   ├── horarios.py
-│   │   ├── reservas.py
-│   │   ├── definitions.py
-│   │   └── registry.py
-│   ├── cli.py
-│   ├── config.py
-│   ├── database.py
-│   ├── models.py
-│   ├── schemas.py
-│   ├── seed.py
-│   └── __init__.py
-├── .env
-├── .env.example
-├── .gitignore
-├── requirements.txt
-├── restaurante.db
-├── README.md
-└── .venv/
-```
+<!-- Adicione aqui um print ou GIF da conversa:
+![Conversa com o assistente](docs/tela-chat.png)
+-->
 
 ## Como funciona
 
-O fluxo básico é:
+O modelo da Mistral não acessa o banco de dados. Ele decide **qual função chamar**, e o código Python valida e executa a ação. As regras do restaurante (dias fechados, mesas disponíveis, reserva duplicada) ficam no código, não no prompt.
 
-1. O usuário digita uma mensagem no terminal.
-2. O arquivo `app/cli.py` inicia o agente.
-3. O agente monta o contexto com:
-   - instruções do sistema
-   - histórico da conversa
-   - mensagem atual
-4. Esse texto é enviado para a Mistral.
-5. A Mistral decide se:
-   - responde diretamente, ou
-   - chama uma tool
-6. Se ela chamar uma tool, o código executa a ferramenta em Python.
-7. O resultado volta para a Mistral.
-8. A Mistral responde ao usuário com uma resposta final.
+```mermaid
+flowchart LR
+    C[Cliente] -->|mensagem| I[Terminal ou chat web]
+    I --> A[Agente]
+    A -->|histórico e tools| M[API da Mistral]
+    M -->|pede uma tool| A
+    A -->|executa| T[Tools em Python]
+    T --> D[(SQLite)]
+    T -->|resultado| A
+    M -->|resposta final| A
+    A --> I
+```
 
-Em outras palavras, o modelo não “faz o trabalho” diretamente no banco. Ele decide qual ação precisa ser executada e o código Python executa essa ação de forma segura.
+1. O cliente envia uma mensagem.
+2. O agente monta o contexto: instruções do sistema (com data e calendário atuais), histórico da conversa e a nova mensagem.
+3. A Mistral responde direto ou pede uma tool.
+4. Se pediu uma tool, o Python executa e devolve o resultado ao modelo.
+5. O ciclo repete até o modelo produzir a resposta final, com um limite de iterações.
 
 ## Tools disponíveis
 
-As ferramentas definidas no projeto são:
+| Tool | O que faz |
+|---|---|
+| `consultar_cardapio` | Lista categorias e pratos |
+| `consultar_preco` | Preço de um item |
+| `consultar_horario` | Horário de funcionamento |
+| `consultar_disponibilidade` | Verifica mesas para data, horário e número de pessoas |
+| `criar_reserva` | Cria uma reserva |
+| `consultar_reserva` | Consulta uma reserva existente |
+| `cancelar_reserva` | Cancela, mas só depois de o cliente confirmar explicitamente |
 
-- `consultar_cardapio`
-- `consultar_preco`
-- `consultar_horario`
-- `consultar_disponibilidade`
-- `criar_reserva`
-- `consultar_reserva`
-- `cancelar_reserva`
+As definições ficam em `app/tools/definitions.py` e a ligação com as funções reais em `app/tools/registry.py`.
 
-Essas tools são descritas em `app/tools/definitions.py` e conectadas às funções reais em `app/tools/registry.py`.
-
-## Banco de dados
-
-O projeto usa SQLite. O arquivo do banco está em:
-
-```text
-restaurante.db
-```
-
-Os modelos principais são:
-
-- `Cardapio`
-- `Horario`
-- `Mesa`
-- `Reserva`
-
-Esses modelos estão definidos em `app/models.py`.
-
-## Pré-requisitos
-
-Você precisa ter instalado:
+## Requisitos
 
 - Python 3.10 ou superior
-- pip
-- acesso à API da Mistral com chave válida
+- Uma chave da API da Mistral (o plano gratuito **Experiment** serve)
 
-## Configuração do ambiente
+### Como criar a chave
 
-Crie um arquivo `.env` na raiz do projeto com esse formato:
+1. Crie uma conta em [console.mistral.ai](https://console.mistral.ai).
+2. Escolha o plano Experiment. Ele pede verificação por telefone.
+3. Vá em **API Keys** e clique em **Create new key**.
+4. Copie a chave na hora: ela não é exibida de novo.
 
-```env
-MISTRAL_API_KEY=sua_chave_real_aqui
-MISTRAL_MODEL=mistral-small-latest
-DURACAO_RESERVA_MINUTOS=90
-```
-
-Você pode usar o arquivo `.env.example` como base.
-
-Observações:
-
-- o arquivo `.env` deve ficar na raiz do projeto
-- não use aspas na chave
-- não deixe espaços antes/depois do `=`
-- use um modelo que esteja disponível para sua conta
+No plano gratuito, as requisições podem ser usadas para treinar os modelos da Mistral. Não envie dados sensíveis.
 
 ## Instalação
 
-Abra o terminal na pasta do projeto e execute:
+### Windows (PowerShell)
 
 ```powershell
-cd "C:\Users\rodri\OneDrive\Documentos\projeto_Mistral"
+git clone https://github.com/Mykael-r/Projeto_Mistral.git
+cd Projeto_Mistral
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install --upgrade pip
 pip install -r requirements.txt
+copy .env.example .env
 ```
 
-## Testando o projeto
+Se o PowerShell bloquear a ativação do ambiente virtual, rode `Set-ExecutionPolicy -Scope Process RemoteSigned` e ative de novo.
 
-### Rodar no terminal
+### macOS e Linux
 
-```powershell
-python -m app.cli
-```
-
-### Rodar em modo debug
-
-O modo debug mostra as ferramentas que o modelo chama durante a conversa:
-
-```powershell
-python -m app.cli --debug
-```
-
-### Exemplos de conversa
-
-Tente algo como:
-
-- “Quanto custa o risotto?”
-- “Me mostra o cardápio de entradas”
-- “O restaurante está aberto hoje às 20h?”
-- “Quero reservar para 4 pessoas na sexta às 20:00”
-- “Há mesa disponível para amanhã às 19:30?”
-- “Consulta a reserva do João”
-- “Cancela a reserva 12”
-
-## Como usar o debug
-
-Quando você roda com `--debug`, o código mostra logs detalhados sobre:
-
-- qual tool foi chamada
-- quais argumentos foram enviados
-- o resultado da tool
-- o que a Mistral respondeu
-
-Isso ajuda bastante a entender o funcionamento do agente.
-
-## Troubleshooting
-
-### 1. `ModuleNotFoundError: No module named 'dotenv'`
-
-Isso significa que a dependência do Python não está instalada.
-
-Execute:
-
-```powershell
+```bash
+git clone https://github.com/Mykael-r/Projeto_Mistral.git
+cd Projeto_Mistral
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+cp .env.example .env
 ```
 
-### 2. `MISTRAL_API_KEY não definida`
+### Configurar o `.env`
 
-Verifique se o arquivo `.env` existe e se contém a variável correta.
+Abra o `.env` e preencha, sem aspas e sem espaços ao redor do `=`:
 
-### 3. Erro 403: `This model is not available in your subscription tier`
+```
+MISTRAL_API_KEY=sua_chave_aqui
+MISTRAL_MODEL=ministral-8b-2512
+DURACAO_RESERVA_MINUTOS=90
 
-Isso indica que a chave funciona, mas o modelo escolhido não está disponível para o seu plano/conta da Mistral.
-
-Tente usar um modelo mais simples, por exemplo:
-
-```env
-MISTRAL_MODEL=mistral-small-latest
+# Opcionais (interface web)
+EXIBIR_TOOLS=0
+ORIGENS_PERMITIDAS=
 ```
 
-### 4. Erro 429: `Rate limit exceeded`
+### Popular o banco de dados
 
-Isso significa que a sua conta da Mistral está excedendo o limite de chamadas.
+O banco SQLite (`restaurante.db`) é criado na primeira execução, mas começa **vazio**. Sem dados, o assistente responde que o cardápio está vazio e que o restaurante está fechado todos os dias. Rode o seed uma vez:
 
-O que fazer:
+```
+python -m app.seed
+```
 
-- espere alguns minutos
-- reduza o número de requisições
-- não execute varias instâncias do projeto ao mesmo tempo
+## Escolhendo o modelo
 
-## Dicas importantes
+Nem todo modelo está disponível em todas as contas, e os limites de uso variam por modelo.
 
-- sempre rode apenas uma instância do CLI por vez
-- verifique o `.env` antes de testar
-- use `--debug` para acompanhar o comportamento do agente
-- se a API estiver limitando, espere e tente novamente
+| Erro | Significado | O que fazer |
+|---|---|---|
+| `403 tier_not_allowed` | O modelo não está liberado no seu plano | Escolha outro modelo |
+| `429 rate_limited` | Limite de requisições do modelo | Espere alguns minutos ou troque de modelo |
 
-## Resumo
+O agente faz mais de uma chamada por mensagem quando usa tools, então modelos com limites baixos esgotam mais rápido. Em testes com uma conta gratuita, o `mistral-small-latest` retornou 429 enquanto o `ministral-8b-2512` respondeu normalmente. Teste os modelos da sua conta e use um que funcione com tools.
 
-Este projeto usa a Mistral como cérebro do agente e o Python como executor das regras do restaurante. O modelo decide o que fazer, e o código em Python valida e executa as ações no banco de dados, devolvendo o resultado para a conversa final.
+## Uso
 
-A combinação de:
+### Terminal
 
-- Mistral
-- tools em Python
-- SQLite
-- terminal interativo
+```
+python -m app.cli
+python -m app.cli --debug    # mostra as tools chamadas em cada resposta
+```
 
-permite criar um assistente prático para restaurante, com pouca lógica “hardcoded” no prompt e muita lógica real executada pelo código.
+Exemplos de conversa:
 
-## Observação sobre acesso à API
+- "Quanto custa o risoto?"
+- "Me mostra o cardápio de entradas"
+- "O restaurante abre no sábado?"
+- "Quero reservar para 4 pessoas na sexta às 20h"
+- "Consulta a reserva do João"
+- "Cancela a reserva 12"
 
-A aplicação depende da API da Mistral e do seu plano/conta. Se a autenticação ou o modelo não estiverem disponíveis na sua conta, o agente não consegue responder corretamente mesmo que o código esteja funcionando.
+### Interface web
 
-Se o projeto for reproduzido em outra máquina, o passo mais importante é a configuração correta do arquivo `.env`.
+```
+uvicorn app.api:app --reload
+```
 
----
+Abra `http://127.0.0.1:8000`. A documentação interativa da API fica em `http://127.0.0.1:8000/docs`.
 
-Se quiser, também posso criar uma versão ainda mais curta desse README, em formato de apresentação, para mandar para amigos ou colocar no GitHub.
+Com `EXIBIR_TOOLS=1` no `.env`, cada resposta ganha um painel "consultas ao sistema" com as tools chamadas. É a versão web do `--debug`, útil em demonstrações.
+
+> Não rode o terminal e o servidor web ao mesmo tempo com a mesma chave: eles dividem o mesmo limite de requisições.
+
+## Colocando o chat no site do restaurante
+
+O chat é um componente independente (`app/static/chat.js`). Ele usa Shadow DOM, então o CSS do site não altera o chat e vice-versa.
+
+**1. Deixe o servidor acessível pela internet**, de preferência com HTTPS. O site só carrega o script e conversa com esse servidor.
+
+**2. Autorize o domínio do site** no `.env` do servidor. Sem isso, o navegador bloqueia as chamadas:
+
+```
+ORIGENS_PERMITIDAS=https://www.seurestaurante.com.br
+```
+
+**3. Cole no HTML do site**, antes do `</body>`:
+
+```html
+<script src="https://SEU-SERVIDOR/static/chat.js"
+        data-api="https://SEU-SERVIDOR" defer></script>
+```
+
+Aparece um botão "Reservas e cardápio" no canto da tela, que abre o chat.
+
+Para embutir o chat dentro de uma área da página, em vez do botão flutuante:
+
+```html
+<div id="sabor-arte-chat" style="height: 600px"></div>
+<script src="https://SEU-SERVIDOR/static/chat.js"
+        data-api="https://SEU-SERVIDOR"
+        data-modo="embutido" data-alvo="#sabor-arte-chat" defer></script>
+```
+
+| Atributo | Descrição | Padrão |
+|---|---|---|
+| `data-api` | Endereço do servidor | mesmo domínio da página |
+| `data-modo` | `flutuante` ou `embutido` | `flutuante` |
+| `data-alvo` | Seletor do elemento, no modo embutido | `#sabor-arte-chat` |
+| `data-nome` | Nome exibido | `Sabor & Arte` |
+
+## API
+
+### `POST /chat`
+
+Requisição:
+
+```json
+{ "mensagem": "Quero ver o cardápio", "session_id": null }
+```
+
+Resposta:
+
+```json
+{
+  "resposta": "Aqui está o cardápio: ...",
+  "session_id": "9f2c1e...",
+  "tools": [],
+  "erro": false
+}
+```
+
+- Na primeira mensagem, envie `session_id` como `null` e reutilize o valor devolvido nas seguintes. Cada `session_id` tem seu próprio histórico.
+- A mensagem tem no máximo 1000 caracteres.
+- `tools` só vem preenchido com `EXIBIR_TOOLS=1`.
+- `erro: true` indica que `resposta` é uma mensagem de falha, já pronta para exibir ao cliente.
+
+### `GET /saude`
+
+Retorna `{"status": "ok"}`.
+
+## Estrutura do projeto
+
+```
+Projeto_Mistral/
+├── app/
+│   ├── agent/
+│   │   ├── agent.py            # loop de function calling
+│   │   ├── memory.py           # histórico por sessão
+│   │   ├── mistral_client.py   # chamada à API da Mistral
+│   │   └── prompts.py          # system prompt com data e calendário atuais
+│   ├── tools/
+│   │   ├── cardapio.py
+│   │   ├── horarios.py
+│   │   ├── reservas.py
+│   │   ├── definitions.py      # descrição das tools para o modelo
+│   │   └── registry.py         # liga cada tool à sua função
+│   ├── static/
+│   │   ├── chat.js             # componente de chat (flutuante ou embutido)
+│   │   └── index.html          # página completa
+│   ├── api.py                  # API FastAPI
+│   ├── cli.py                  # chat no terminal
+│   ├── config.py
+│   ├── database.py
+│   ├── models.py
+│   ├── schemas.py
+│   └── seed.py                 # popula o banco
+├── .env.example
+├── requirements.txt
+└── README.md
+```
+
+## Banco de dados
+
+SQLite, criado localmente em `restaurante.db`. Modelos (em `app/models.py`): `Cardapio`, `Horario`, `Mesa` e `Reserva`.
+
+## Antes de publicar na internet
+
+- **Custo:** qualquer visitante consome a sua cota da Mistral. Limite mensagens por sessão ou por IP.
+- **Privacidade:** se a consulta de reservas funcionar só com o nome do cliente, qualquer visitante pode ver reservas de outras pessoas. Exija também o número da reserva.
+- **Painel de tools:** mantenha `EXIBIR_TOOLS=0`. Ele mostra argumentos e resultados internos.
+- **Memória:** o histórico das conversas fica na RAM do servidor e some ao reiniciar.
+- **Banco:** alguns serviços de hospedagem gratuitos apagam o SQLite a cada deploy. Rode o seed na inicialização se for o caso.
+
+## Solução de problemas
+
+| Sintoma | Causa provável | Solução |
+|---|---|---|
+| `ModuleNotFoundError: No module named 'dotenv'` | Ambiente virtual inativo ou dependências não instaladas | Ative o venv e rode `pip install -r requirements.txt` |
+| `MISTRAL_API_KEY não definida` | `.env` ausente, fora da raiz ou salvo como `.env.txt` | Confira o nome e o local do arquivo |
+| `401` | Chave inválida ou conta não ativada | Gere uma nova chave e confira o plano no console |
+| `403 tier_not_allowed` | Modelo fora do seu plano | Troque `MISTRAL_MODEL` |
+| `429 rate_limited` | Limite de requisições | Espere ou troque de modelo |
+| Cardápio vazio, "fechado todos os dias" | Banco sem dados | Rode `python -m app.seed` |
+| `RuntimeError: Directory 'app/static' does not exist` | Pasta `static` ausente ou no lugar errado | Ela deve ficar dentro de `app/` |
+| `Address already in use` | Porta 8000 ocupada | `uvicorn app.api:app --reload --port 8001` |
+| O chat abre no site, mas não responde | Domínio não autorizado (CORS) | Adicione o domínio em `ORIGENS_PERMITIDAS` |

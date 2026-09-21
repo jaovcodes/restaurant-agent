@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sabor &amp; Arte: cardápio e reservas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link id="sa-fontes" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&amp;family=Hanken+Grotesk:wght@400;500;600&amp;display=swap">
+<style>
+  :root {
+    --vinho: #3b1521;
+    --papel: #fafaf8;
+    --latao: #9a7433;
+    --serifa: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body { height: 100%; margin: 0; }
+
+  body {
+    background: var(--papel);
+    font-family: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  .pagina {
+    height: 100vh;
+    height: 100dvh;
+    display: grid;
+    grid-template-columns: minmax(340px, 5fr) 7fr;
+  }
+
+  /* ---------- faixa do restaurante ---------- */
+  .lateral {
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: clamp(40px, 9vh, 96px) clamp(32px, 4.5vw, 72px) 44px;
+    background: var(--vinho);
+    color: #f3ecee;
+  }
+
+  /* o & do nome, enorme e quase invisível, como marca-d'água */
+  .lateral::after {
+    content: "&";
+    position: absolute;
+    right: -3%;
+    bottom: -26%;
+    font-family: var(--serifa);
+    font-weight: 500;
+    font-size: min(74vh, 600px);
+    line-height: 1;
+    color: rgba(154, 116, 51, 0.15);
+    pointer-events: none;
+  }
+
+  .lateral > * { position: relative; z-index: 1; }
+
+  .nome {
+    margin: 0;
+    font-family: var(--serifa);
+    font-weight: 500;
+    font-size: clamp(60px, 7.4vw, 124px);
+    line-height: 0.94;
+    letter-spacing: -0.01em;
+  }
+
+  .filete {
+    width: 72px;
+    height: 2px;
+    margin: 36px 0 30px;
+    background: var(--latao);
+  }
+
+  .destaque {
+    margin: 0 0 22px;
+    max-width: 17em;
+    font-family: var(--serifa);
+    font-style: italic;
+    font-weight: 500;
+    font-size: clamp(26px, 2.5vw, 38px);
+    line-height: 1.25;
+    color: #f8f2f4;
+  }
+
+  .apresentacao {
+    margin: 0;
+    max-width: 34ch;
+    font-size: 17px;
+    line-height: 1.6;
+    color: #d3c3c9;
+  }
+
+  .aviso { margin: 0; font-size: 14px; color: #b8a5ac; }
+
+  #sabor-arte-chat { height: 100%; min-height: 0; }
+
+  @media (max-width: 860px) {
+    .pagina { display: flex; flex-direction: column; }
+
+    .lateral {
+      flex-direction: row;
+      align-items: center;
+      padding: 16px 20px;
+    }
+
+    .lateral::after { display: none; }
+    .nome { font-size: 32px; }
+    .nome br { display: none; }
+    .filete, .destaque, .apresentacao, .aviso { display: none; }
+
+    #sabor-arte-chat { flex: 1; height: auto; }
+  }
+</style>
+</head>
+<body>
+  <div class="pagina">
+    <aside class="lateral">
+      <div>
+        <h1 class="nome">Sabor <br>&amp; Arte</h1>
+        <div class="filete"></div>
+        <p class="destaque">Da bruschetta ao tiramisù, da moqueca ao pudim de leite: uma mesa que reúne a cozinha italiana e a brasileira.</p>
+        <p class="apresentacao">Converse com a Lucia para ver o cardápio, conferir os horários e reservar a sua mesa.</p>
+      </div>
+      <p class="aviso">Atendimento por assistente virtual</p>
+    </aside>
+
+    <div id="sabor-arte-chat"></div>
+  </div>
+
+  <script src="/static/chat.js" data-modo="embutido" data-alvo="#sabor-arte-chat" defer></script>
+</body>
+</html>
