@@ -64,7 +64,7 @@ No plano gratuito, as requisições podem ser usadas para treinar os modelos da 
 ### Windows (PowerShell)
 
 ```powershell
-git clone https://github.com/Mykael-r/Projeto_Mistral.git
+git clone https://github.com/jaovcodes/restaurant-agent.git
 cd Projeto_Mistral
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -78,7 +78,7 @@ Se o PowerShell bloquear a ativação do ambiente virtual, rode `Set-ExecutionPo
 ### macOS e Linux
 
 ```bash
-git clone https://github.com/Mykael-r/Projeto_Mistral.git
+git clone https://github.com/jaovcodes/restaurant-agent.git
 cd Projeto_Mistral
 python3 -m venv .venv
 source .venv/bin/activate
